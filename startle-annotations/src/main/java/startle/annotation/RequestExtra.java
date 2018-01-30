@@ -10,6 +10,4 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.SOURCE)
 public @interface RequestExtra {
     Class value() default void.class;
-
-    boolean optional() default false;
 }

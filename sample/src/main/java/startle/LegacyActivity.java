@@ -1,6 +1,7 @@
 package startle;
 
 import android.app.Activity;
+import android.support.annotation.Nullable;
 
 import java.io.Serializable;
 
@@ -13,6 +14,7 @@ public class LegacyActivity extends Activity {
     public static final String EXTRA_ID = "id";
     @RequestExtra(Serializable.class)
     public static final String EXTRA_SOME_OBJECT = "some-object";
-    @RequestExtra(value = String.class, optional = true)
+    @RequestExtra(String.class)
+    @Nullable
     public static final String EXTRA_MESSAGE = "message";
 }

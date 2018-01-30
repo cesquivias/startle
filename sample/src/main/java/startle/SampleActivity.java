@@ -2,6 +2,7 @@ package startle;
 
 import android.app.Activity;
 import android.support.annotation.IntDef;
+import android.support.annotation.Nullable;
 
 import java.util.HashMap;
 
@@ -12,7 +13,7 @@ import startle.annotation.Startle;
 public class SampleActivity extends Activity {
     @RequestExtra long id;
     @RequestExtra HashMap<String, String> data;
-    @RequestExtra(optional = true) String message;
+    @RequestExtra @Nullable String message;
     @RequestExtra @Flag int flag;
 
     @IntDef({FLAG_FOO, FLAG_BAR})

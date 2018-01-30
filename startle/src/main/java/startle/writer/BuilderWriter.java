@@ -35,7 +35,6 @@ class BuilderWriter {
     private final TypeElement classElement;
     private final List<VariableElement> staticFinalExtras;
     private final List<VariableElement> instanceExtras;
-    private final Elements elementUtils;
     private final Types typeUtils;
     private final ClassName className;
     private final ClassName builderName;
@@ -50,7 +49,6 @@ class BuilderWriter {
         this.classElement = classElement;
         this.staticFinalExtras = staticFinalExtras;
         this.instanceExtras = instanceExtras;
-        this.elementUtils = elementUtils;
         this.typeUtils = typeUtils;
         this.className = ClassName.get(classElement);
         this.builderName = builderName;
@@ -123,7 +121,7 @@ class BuilderWriter {
                     .build();
             methods.add(createSetter(toUpperCase(name.charAt(0)) + name.substring(1),
                     field, param));
-            if (annotation.optional()) {
+            if (isNullable(extra)) {
                 setExtraBlock.beginControlFlow("if ($N != null)", field)
                         .addStatement("intent.putExtra($N, $N)",
                                 nameField, field)
@@ -134,6 +132,12 @@ class BuilderWriter {
                         nameField, field);
             }
         }
+    }
+
+    private boolean isNullable(VariableElement extra) {
+        return extra.getAnnotationMirrors().stream()
+                .anyMatch(a -> "Nullable".equals(
+                        a.getAnnotationType().asElement().getSimpleName().toString()));
     }
 
     private FieldSpec getStaticFinalExtraFieldSpec(String name) {
@@ -161,7 +165,7 @@ class BuilderWriter {
             ParameterSpec param = ParameterSpec.builder(extraClassName, camelName)
                     .build();
             methods.add(createSetter(name, field, param));
-            if (requestExtra.optional()) {
+            if (isNullable(extra)) {
                 addOptionalPut(setExtraBlock, extra, field);
             } else {
                 addRequiredVerification(verifyExtraBlocks, extra, field);
