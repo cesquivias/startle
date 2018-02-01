@@ -37,7 +37,7 @@ class BuilderWriter {
     private final List<VariableElement> instanceExtras;
     private final Types typeUtils;
     private final ClassName className;
-    private final ClassName builderName;
+    final ClassName builderName;
     private final ClassName intentName;
     private final ClassName contextName;
     private final ParameterSpec contextParam;
@@ -140,10 +140,10 @@ class BuilderWriter {
                         a.getAnnotationType().asElement().getSimpleName().toString()));
     }
 
-    private FieldSpec getStaticFinalExtraFieldSpec(String name) {
+    FieldSpec getStaticFinalExtraFieldSpec(String name) {
         return FieldSpec.builder(ClassName.get(String.class),
                 "EXTRA_" + name.toUpperCase(),
-                Modifier.PRIVATE, Modifier.STATIC, Modifier.FINAL)
+                Modifier.STATIC, Modifier.FINAL)
                 .initializer("\"$L.$L\"", className, name)
                 .build();
     }
