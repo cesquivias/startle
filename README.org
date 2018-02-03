@@ -1,0 +1,162 @@
+* Startle
+
+Bind activity extras to fields automatically and with type checking.
+
+ - Eliminate digging into the intent extras map for values
+ - Verify all required values are passed and avoid boilerplate checks
+ - Eliminate boilerplate binding of extras to fields
+ - Gradually migrate from your complicated legacy process to cleaner pattern
+
+* Examples
+
+** Ideal Activity Definition
+
+If you're starting a new Activity or your class isn't too complicated the preferred way to declare your activity extras is
+
+#+begin_src java
+  package startle.demo;
+
+  import android.app.Activity;
+  import android.graphics.Bitmap
+
+  import startle.annotation.RequestExtra;
+
+
+  import static static.demo.StartDemoActivity.bindExtras;
+
+  public class DemoActivity extends Activity {
+      @RequestExtra int id;
+      @RequestExtra String message;
+      @Nullable // Setting a field as Nullable makes it optional
+      @RequestExtra Bitmap thumbnail; // Only Parcelable and Serializable objects allowed
+
+      @Override
+      protected void onCreate(Bundle savedInstanceState) {
+          super.onCreate(savedInstanceState);
+
+          bindExtras(this);
+      }
+  }
+#+end_src
+
+When you want to start this class, don't use the activity's ~startActivity~ method. Instead
+
+#+begin_src java
+  package startle.demo;
+
+  import static startle.demo.StartDemoActivity.prepareDemoActivity;
+
+  public class CallingActivity extends Activity {
+      private void onSubmit(int id, String message) {
+          prepareDemoActivity(this)
+              .setId(id)
+              .setMessage(message)
+              // thumbnail is optional so you don't need to set it
+              .startActivity();
+      }
+  }
+#+end_src
+
+If the caller doesn't set a required field an IllegalStateException is thrown with a descriptive message stating the missing extras.
+
+** Improving Legacy Activity
+
+If you have existing activities that are not easily ported, you can annotate the key name constants
+
+#+begin_src java
+  package startle.demo;
+
+  import startle.annotation.RequestExtra;
+
+  import static static.demo.StartLegacyActivity.bindExtras;
+
+  public class LegacyActivity extends Activity {
+    
+      @RequestExtra(int.class)
+      public static final String EXTRA_ID = "extra.id";
+      @RequestExtra(String.class)
+      public static final String EXTRA_MESSAGE = "extra.message";
+      /**
+       ,* Only required extras are supported when annotating key constants
+       ,*/
+      public static final String EXTRA_THUMBNAIL = "extra.thumbnail";
+
+      @Override
+      protected void onCreate(Bundle savedInstanceState) {
+          super.onCreate(savedInstanceState);
+          // the existing extras binding and processing
+      }
+  }
+#+end_src
+
+The callers of this activity can still use Startle calling pattern and add any untracked extras in a bundle
+
+#+begin_src java
+  package startle.demo;
+
+  import static startle.demo.StartLegacyActivity.prepareLegacyActivity;
+
+  public class CallingActivity extends Activity {
+      private void onSubmit(int id, String message, Extras otherExtras) {
+          prepareLegacyActivity(this)
+              .setId(id)
+              .setMessage(message)
+              .setExtras(otherExtras)
+              .startActivity();
+      }
+  }
+
+#+end_src
+
+** Simple Activity
+
+If you want to be consistent and use startle to start all your activites--even the ones without extras--you can add an annotation to the class.
+
+#+begin_src java
+  package startle.demo;
+
+  import startle.annotation.Startle;
+
+  @Startle
+  public class SimpleActivity extends Activity {
+  }
+#+end_src
+
+#+begin_src java
+  import startle.demo.StartSimpleActivity.startSimpleActivity;
+
+  public class CallingActivity extends Activity {
+      private void onSubmit() {
+          startSimpleActivity(this);
+      }
+  }
+#+end_src
+
+** Start Activity for Result
+
+There is a method to start an activity for result
+
+#+begin_src java
+  import startle.demo.StartSimpleActivity.startDemoActivity;
+
+  public class CallingActivity extends Activity {
+      private static final int REQUEST_DEMO = 1;
+
+      private void onSubmit(int id, String message) {
+          startDemoActivity(this)
+              .setId(id)
+              .set(message)
+              .startActivityForResult(REQUEST_DEMO);
+      }
+
+      @Override
+      void onActivityResult(int requestCode, int resultCode, Intent data) {
+          ...
+      }
+  }
+#+end_src
+
+* Lint Warnings
+  *TODO* The goal is to create lint rules that will warn when activities don't use Startle. There will also be lint errors if not all extras were set when building the request.
+
+  Activities that don't use Startle won't be affected
