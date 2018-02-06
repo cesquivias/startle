@@ -11,8 +11,6 @@ import com.squareup.javapoet.TypeSpec;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
@@ -24,6 +22,7 @@ import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.Elements;
 import javax.lang.model.util.Types;
 
+import startle.VariableUtils;
 import startle.annotation.RequestExtra;
 
 import static java.lang.Character.toLowerCase;
@@ -158,7 +157,7 @@ class BuilderWriter {
             } catch (MirroredTypeException e) {
                 extraClassName = getExtraFieldName(e.getTypeMirror());
             }
-            String name = getNameFromStaticFinal(extra);
+            String name = VariableUtils.getNameFromStaticFinal(extra);
             String camelName = toLowerCase(name.charAt(0)) + name.substring(1);
             FieldSpec field = getFieldSpec(extraClassName, camelName, getAnnotationsSpecs(extra));
             fields.add(field);
@@ -230,10 +229,4 @@ class BuilderWriter {
         }
     }
 
-    private String getNameFromStaticFinal(VariableElement element) {
-        return Stream.of(element.getSimpleName().toString().split("_"))
-                .skip(1)
-                .map(n -> n.charAt(0) + n.substring(1).toLowerCase())
-                .collect(Collectors.joining());
-    }
 }

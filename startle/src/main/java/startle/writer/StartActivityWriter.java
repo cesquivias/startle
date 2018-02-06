@@ -6,6 +6,7 @@ import com.squareup.javapoet.FieldSpec;
 import com.squareup.javapoet.JavaFile;
 import com.squareup.javapoet.MethodSpec;
 import com.squareup.javapoet.ParameterSpec;
+import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
 
 import java.util.ArrayList;
@@ -15,11 +16,16 @@ import javax.annotation.Nonnull;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
+import javax.lang.model.type.MirroredTypeException;
 import javax.lang.model.type.TypeKind;
+import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.Elements;
 import javax.lang.model.util.Types;
 
-import static java.lang.Character.toUpperCase;
+import startle.VariableUtils;
+import startle.annotation.RequestExtra;
+
+import static startle.StringUtils.capitalize;
 
 public class StartActivityWriter {
     private static final String PREFIX = "Start";
@@ -75,7 +81,10 @@ public class StartActivityWriter {
                     staticFinalExtras, instanceExtras, elementUtils, typeUtils, builderName);
             innerClasses.add(builderWriter.createBuilder());
             methods.add(createPrepareMethod());
-            methods.add(createSetExtrasMethod(builderWriter));
+            if (!instanceExtras.isEmpty()) {
+                methods.add(createSetExtrasMethod(builderWriter));
+            }
+             methods.addAll(createIntentGetterMethods());
         }
         List<VariableElement> extras = new ArrayList<>(staticFinalExtras);
         extras.addAll(instanceExtras);
@@ -121,12 +130,12 @@ public class StartActivityWriter {
             if (kind.isPrimitive()) {
                 String type = extra.asType().toString();
                 setBlock.addStatement("$N.$N = intent.get$LExtra($T.$N, $L)",
-                        activityParam, extraField, toUpperCase(type.charAt(0)) + type.substring(1),
+                        activityParam, extraField, capitalize(type),
                         builderWriter.builderName, extraStaticKeyField, getDefaultValue(kind));
             } else {
                 setBlock.addStatement("$N.$N = ($T) intent.get$LExtra($T.$N)",
                         activityParam, extraField, ClassName.get(extra.asType()),
-                        getExtraTypeName(extra),
+                        getExtraTypeName(extra.asType()),
                         builderWriter.builderName, extraStaticKeyField);
             }
         }
@@ -136,6 +145,42 @@ public class StartActivityWriter {
                 .addStatement("$T intent = $N.getIntent()", intentName, activityParam)
                 .addCode(setBlock.build())
                 .build();
+    }
+
+    private List<MethodSpec> createIntentGetterMethods() {
+        List<MethodSpec> getters = new ArrayList<>();
+        for (VariableElement staticField : staticFinalExtras) {
+            RequestExtra requestExtra = staticField.getAnnotation(RequestExtra.class);
+            TypeMirror extraType;
+            try {
+                extraType = elementUtils.getTypeElement(requestExtra.value().getCanonicalName()).asType();
+            } catch (MirroredTypeException e) {
+                extraType = e.getTypeMirror();
+            }
+            TypeName returnClass = ClassName.get(extraType);
+            getters.add(MethodSpec.methodBuilder("get" + capitalize(VariableUtils.getNameFromStaticFinal(staticField)))
+                    .addModifiers(Modifier.STATIC)
+                    .addParameter(intentName, "intent")
+                    .addCode(getterBlock(staticField, extraType))
+                    .returns(returnClass)
+                    .build());
+        }
+        return getters;
+    }
+
+    private CodeBlock getterBlock(VariableElement var, TypeMirror type) {
+        if (type.getKind().isPrimitive()) {
+            return CodeBlock.builder()
+                    .addStatement("return intent.get$LExtra($T.$N, $L)",
+                            getExtraTypeName(type), className, var.getSimpleName(),
+                            getDefaultValue(type.getKind()))
+                    .build();
+        } else {
+            return CodeBlock.builder()
+                    .addStatement("return ($T) intent.get$LExtra($T.$N)",
+                            type, getExtraTypeName(type), className, var.getSimpleName())
+                    .build();
+        }
     }
 
     private Object getDefaultValue(TypeKind kind) {
@@ -156,16 +201,16 @@ public class StartActivityWriter {
         }
     }
 
-    private String getExtraTypeName(VariableElement extra) {
-        if (extra.asType().getKind().isPrimitive()) {
-            String type = typeUtils.getPrimitiveType(extra.asType().getKind()).toString();
-            return toUpperCase(type.charAt(0)) + type.substring(1);
-        } else if (typeUtils.isSubtype(extra.asType(), elementUtils.getTypeElement("java.io.Serializable").asType())) {
+    private String getExtraTypeName(TypeMirror type) {
+        if (type.getKind().isPrimitive()) {
+            String typeName = typeUtils.getPrimitiveType(type.getKind()).toString();
+            return capitalize(typeName);
+        } else if (typeUtils.isSubtype(type, elementUtils.getTypeElement("java.io.Serializable").asType())) {
             return "Serializable";
-        } else if (typeUtils.isSubtype(extra.asType(), elementUtils.getTypeElement("android.os.Parcelable").asType())) {
+        } else if (typeUtils.isSubtype(type, elementUtils.getTypeElement("android.os.Parcelable").asType())) {
             return "Parcelable";
         } else {
-            throw new IllegalStateException("Cannot find extra getter for type " + extra.asType());
+            throw new IllegalStateException("Cannot find extra getter for type " + type);
         }
     }
 
