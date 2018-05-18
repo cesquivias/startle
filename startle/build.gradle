@@ -1,4 +1,5 @@
 apply plugin: 'java-library'
+apply plugin: 'com.github.dcendents.android-maven'
 
 dependencies {
     implementation project(':startle-annotations')
@@ -7,5 +8,6 @@ dependencies {
     compileOnly 'com.google.auto.service:auto-service:1.0-rc4'
 }
 
+group = 'com.github.cesquivias.startle'
 sourceCompatibility = "1.8"
 targetCompatibility = "1.8"

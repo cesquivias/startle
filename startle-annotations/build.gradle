@@ -1,6 +1,8 @@
 apply plugin: 'java-library'
+apply plugin: 'com.github.dcendents.android-maven'
 
 dependencies {}
 
-sourceCompatibility = "1.7"
-targetCompatibility = "1.7"
+group = 'com.github.cesquivias.startle'
+sourceCompatibility = "1.8"
+targetCompatibility = "1.8"
